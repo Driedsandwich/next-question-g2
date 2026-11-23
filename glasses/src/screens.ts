@@ -1,6 +1,6 @@
 import { CreateStartUpPageContainer, RebuildPageContainer, TextContainerProperty } from '@evenrealities/even_hub_sdk'
 import type { ServerState } from './api.ts'
-import { CHECK, DOT, ELLIPSIS, UP } from './glyphs.ts'
+import { CHECK, DOT, ELLIPSIS } from './glyphs.ts'
 
 export type ScreenKind = 'setup' | 'offline' | 'waiting' | 'empty' | 'question' | 'answered' | 'ended'
 
@@ -93,7 +93,7 @@ export function timeLeft(s: ServerState): string {
 
 export function headerLine(s: ServerState): string {
   const votes = s.head ? s.head.votes : 0
-  const parts = [`Next (${votes}${UP})`, `${s.position} of ${s.total}`]
+  const parts = [`AMA ${DOT} ${votes} ${votes === 1 ? 'vote' : 'votes'}`, `${s.position} of ${s.total}`]
   const t = timeLeft(s)
   if (t) parts.push(t)
   return parts.join(` ${DOT} `)
@@ -138,7 +138,7 @@ export function buildScreen(s: ServerState | null, ctx: Ctx): Screen {
     const next = s.head ? `Next:\n${wrapClip(s.head.text, BODY_COLS, 2)}` : 'No more open questions.'
     return single(
       'answered',
-      `${CHECK} Answered\n${oneLine(a.text)}\n` + (a.takeaway ? `- ${oneLine(a.takeaway, BODY_COLS - 2)}\n` : '') + `\n${next}\n\nSwipe up = undo`,
+      `${CHECK} Answered\n${oneLine(a.text)}\n` + (a.takeaway ? `- ${oneLine(a.takeaway, BODY_COLS - 2)}\n` : '') + `\n${next}\n\nNext in 4s ${DOT} Swipe up = undo`,
     )
   }
 
