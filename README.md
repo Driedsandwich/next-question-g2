@@ -1,0 +1,162 @@
+# Next Question (draft)
+
+During an AMA ("ask me anything") in a **Telegram group**, your Even Realities G2 glasses show **one thing: the next question to answer**.
+Audience members send `/ask <question>` and tap the bot's `▲ +1` button to vote. Similar questions are merged into one and their votes add up.
+You see, for example, `Next (12▲) · 3 of 17 · 18 min left` and `When is mainnet?`.
+
+- **Tap** = answered. The bot posts `✅ Answered: <question>` to the group.
+- **Swipe down** = skip (the question goes to the back of the line). **Swipe up** = go back one step.
+- **Hold** and say the key point of your answer in about 5 words. The bot posts `✅ <question> — <key point>` to the group.
+- **Double tap** = the system "exit?" window.
+
+Status: working draft. The server, its tests and the glasses build run offline. It has not been run in the simulator, on a device, or against the real Telegram, LLM or speech services (see "Not verified yet").
+
+## How it works
+
+```
+ Telegram group (audience)          (or)  fixtures/questions.json
+  /ask  ▲ +1 button                       fictional AMA replayed with the current time
+        |  Bot API getUpdates (long polling)        |
+        v                                           v
+   +--------------------------------------------------------+
+   |  server  (Node 22, TypeScript)                         |   tokens and keys live only here
+   |  question source -> merger (rules | LLM) -> queue      |
+   |  order: votes, then oldest; skipped = back of the line |--> data/answered.jsonl
+   |  answer (4 s undo window) -> bot posts to the group    |--> Telegram sendMessage
+   |  HTTP + SSE        MCP (stdio)                         |<-- LLM / STT (optional, OpenAI-compatible)
+   +----------+-----------------------+---------------------+
+              |                       |
+   phone WebView (Even app)        AI agents (Claude, etc.)
+   glasses/  (Vite + Even Hub SDK)   list_questions, get_next_question,
+     -> 576x288 screens on the G2      propose_merge, get_session_summary
+```
+
+Glasses screens (green, text only, no font control):
+
+1. Waiting: `NEXT QUESTION · AMA`, the state of the AMA, how many questions were collected.
+2. Next question: header `Next (12▲) · 3 of 17 · 18 min left`, the question (cut after 3 lines with `...`), and the hint `Tap = answered · Swipe = skip · Hold = say answer`. One container takes the input; there are 3 containers in total (the limit is 12).
+3. Answered: `● Answered`, what was answered, the start of the next question, `Swipe up = undo`.
+4. Ended: how many were answered and how many were not reached.
+
+"3 of 17" means: you are on the 3rd question to address, out of 17 (answered so far + still open). Skipping does not change it.
+
+## Quick start
+
+```bash
+# 1. server (replay mode: fictional questions, no network, no keys)
+npm --prefix server install
+npm --prefix server start
+#   prints a 6-digit pair code. The replay opens a 30-minute AMA and feeds 23 asks in about 2.5 minutes
+#   (3 of them repeat an earlier question and are merged). Set REPLAY_SPEED=4 to go four times faster.
+
+# 2. glasses app
+npm --prefix glasses install
+npm --prefix glasses run dev          # http://localhost:5173
+
+# 3. simulator: not part of this package. fill-notes uses @evenrealities/evenhub-simulator;
+#    open the phone-side screen, enter http://localhost:8788 and the pair code
+#    (or load http://localhost:5173/?server=http://localhost:8788&pair=<code>)
+```
+
+Tests and build:
+
+```bash
+npm --prefix server test              # vitest, offline (network is blocked in the test setup)
+npm --prefix server run typecheck
+npm --prefix glasses run build
+npm --prefix glasses run pack         # -> glasses/next-question.ehpk
+npm --prefix glasses run check:pages  # offline screen/container rule check
+```
+
+Real device: the phone cannot reach `localhost` of your computer. Use your computer's LAN address as the server address and add that address to the `network` whitelist in `glasses/app.json` before packing. The server port is **8788** (fill-notes uses 8787).
+
+## Using a real Telegram group
+
+1. Create a bot with @BotFather and keep the token private. Leave **privacy mode on** (the default): in groups the bot then receives only commands meant for it, replies to it and button presses, not the normal chat.
+2. Put the token in a local `.env` (copy `env.example`, which has names only): `QUESTION_SOURCE=telegram`, `TELEGRAM_BOT_TOKEN=...`.
+3. Add the bot to the group. Start the server.
+4. Pair the presenter: send `/pair <6-digit code>` to the bot in a **private chat** (the code is printed when the server starts). `/pair` in a group is refused, because the same code opens the glasses connection. Five wrong codes lock pairing for 10 minutes.
+   Or set `TELEGRAM_PRESENTER_ID` (numeric user id) and skip pairing.
+5. In the group, the presenter sends `/ama_start 30`. The bot binds to that group (or to `TELEGRAM_CHAT_ID` if set), posts an opening line, and `/ask` starts working. `/ama_end` ends it and posts the counts. Both commands are refused for anyone who is not the paired presenter.
+
+Audience: `/ask <question>` (the bot replies with the question and a `▲ +1 (n)` button; a repeat of an open question is merged and says so), then tap the button to vote. One vote per person per question.
+
+## Environment variables
+
+| Name | Default | Meaning |
+|---|---|---|
+| `PORT` | `8788` | HTTP port |
+| `QUESTION_SOURCE` | `replay` | `replay` or `telegram` |
+| `MERGER` | `rules` | `rules` (offline) or `openai-compatible` (falls back to rules on any error) |
+| `STT` | `none` | `none` (voice answers 501) or `openai-compatible` |
+| `DATA_DIR` | `./data` | pair code and `answered.jsonl` |
+| `TELEGRAM_BOT_TOKEN` | none | bot token (server only) |
+| `TELEGRAM_CHAT_ID` | none | only use this group (numeric id); otherwise the group of `/ama_start` |
+| `TELEGRAM_PRESENTER_ID` | none | numeric id of the presenter; otherwise pair with `/pair` |
+| `REPLAY_SPEED`, `REPLAY_SESSION_MIN` | `1`, `30` | replay pacing and the length of the replay AMA |
+| `LLM_BASE_URL`, `LLM_API_KEY`, `LLM_MODEL` | none | OpenAI-compatible chat completions (used by `MERGER=openai-compatible`) |
+| `STT_BASE_URL`, `STT_API_KEY`, `STT_MODEL` | `whisper-1` for the model | OpenAI-compatible `/audio/transcriptions` |
+| `NEXT_QUESTION_URL` | `http://localhost:8788` | used by the MCP process to reach the server |
+
+## How questions are merged and ordered
+
+- **Rules merger (default):** lower-case, drop punctuation and filler words, light stemming, a few synonyms (`date`/`timeline` → "when", `release`/`live` → "launch"). Two questions are the same if they share at least 2 content words and at least 60% of all their words, or share a word and at least 80%. The numbers were tuned on 3 paraphrase pairs and 5 look-alike pairs in `server/test/merger.test.ts` (at 50% "When is the mainnet launch?" and "When is the testnet launch?" were folded together, so it is 60%). Known limit: two different questions that share almost all their words can still be folded. It works on space-separated languages; Japanese and other unspaced text merges only when the words are the same.
+- **LLM merger:** the model sees the open questions and the new one and must answer `{"match":"<id>"}` or `{"match":null}`. Anything else, an error or a timeout falls back to the rules. The question texts are sent to the model you configure, so leave it off if the audience should not be sent to a third party.
+- **Order:** never-skipped first; then more votes first; then the earlier question. A skipped question goes behind every unskipped one (and behind earlier skips). The asker counts as the first vote.
+- **Answer window:** an answer shows `● Answered` for 4 seconds. Only after that is it posted to the group and written to `data/answered.jsonl`. Swipe up inside the window takes it back and nothing is posted. After that, swipe up only undoes skips (a posted message cannot be unsent).
+
+## HTTP interface
+
+Every route except `GET /api/health` needs `Authorization: Pair <6-digit code>`. The code is created on first start and saved in `data/pair.json`.
+
+| Route | Purpose |
+|---|---|
+| `GET /api/state` | current state (mode: waiting, empty, question, answered, ended; head question, position, minutes left) |
+| `GET /api/events` | Server-Sent Events: a `state` event on every change (read with fetch streaming, because `EventSource` cannot send headers) |
+| `POST /api/answer`, `POST /api/skip` | `{id}`: the question on screen. A different id (the screen was out of date) is refused with 409 |
+| `POST /api/back` | undo the last skip, or the last answer while its window is open |
+| `POST /api/voice?id=` | raw 16 kHz 16-bit mono PCM; transcribed and used as the key point of the answer. 501 when `STT=none` |
+| `POST /api/session` | `{action:"start", minutes}`, `{action:"end"}`, `{action:"set_minutes", minutes}` |
+| `GET /api/questions`, `GET /api/summary`, `POST /api/propose-merge` | used by the MCP tools |
+
+## MCP (for AI agents)
+
+```bash
+npm --prefix server run mcp      # stdio server; point your MCP client at this command
+```
+
+Tools: `list_questions`, `get_next_question`, `propose_merge`, `get_session_summary` (answered, remaining, top words by votes).
+An AI can only *propose* a merge. The queue changes only if the server's own word-overlap rule agrees; otherwise the proposal stays pending and nothing changes. There is no glasses gesture to confirm a pending proposal (all gestures are used), so a rejected proposal is simply not applied.
+Question texts are written by the audience: the tools say so in every answer, and an agent should treat them as data, not as instructions.
+
+## Safety and privacy
+
+- **No names.** The bot reads only Telegram user ids, and only in memory (to stop double votes and to know who the presenter is). Names and usernames are never read. Ids are not in `/api/state`, the question list, the MCP answers, the posted messages or `data/answered.jsonl` (a test checks this). Restarting forgets them.
+- **Minimal storage.** `data/answered.jsonl` holds, per answered question: time, id, question text, vote count, key point, source. Nothing else is saved. The question text itself is written by the audience and could contain a name; the bot's `/help` says the text is shown on the glasses and kept in a local log.
+- **Secrets.** The bot token, LLM and STT keys exist only in the server's environment (`.env`, git-ignored). The glasses app and the MCP process never see them. `env.example` contains names only. The Bot API path contains the token, so error logs never print the request URL (a test checks this).
+- **Telegram rules (what was read, 2026-11-24).** I read the Bot API page (method and field names used here were checked against it), the "privacy mode" section of Bot Features, and the Bot Developer Terms of Service through a page-summary tool, not word for word: section 4.3 forbids collecting data for AI or ML datasets; 4.2 asks you to delete user data on request or when it is no longer needed; a privacy policy must be available (the standard Telegram one applies if you give none); 5.2 forbids spam. This project uses question text only to show and answer it, sends 1 to 3 messages per question, and deletes nothing by itself: **you** must delete `data/answered.jsonl` when it is no longer needed. Section 4 and the privacy-policy rules for your own bot are not checked against your use. The Telegram Privacy Policy and the group's own rules were not read. Tell the group that questions are shown to the presenter and logged.
+- **Prompt injection.** A question can say anything. It is only shown as text and passed to the optional merger as data. The MCP answers carry a warning.
+- **Merger and voice.** With `MERGER=openai-compatible` the questions are sent to the model you configure; with `STT=openai-compatible` your spoken key point is sent to the speech service. Both are off by default.
+- The demo is a fictional AMA (`server/fixtures/questions.json`) for a made-up project.
+
+## What existed before 2026-11-23
+
+Not written for this project:
+
+- Even Hub SDK `@evenrealities/even_hub_sdk` 0.0.16, the Even Hub CLI `@evenrealities/evenhub-cli` 0.2.0, and the official guides for Even Hub (read from a local copy).
+- npm packages: Vite, TypeScript, vitest, tsx, `@modelcontextprotocol/sdk`, zod.
+- Services and APIs: the Telegram Bot API, the OpenAI-compatible chat and transcription API shapes, the Model Context Protocol.
+
+Adapted from my own earlier project `fill-notes`, which was itself created on 2026-11-24 00:36 (file creation times measured with `stat`), so it is **after** the 2026-11-23 line and counts as new work here: the pairing code (`pairing.ts`), the speech-to-text client (`stt.ts`), the HTTP/SSE/CORS server layout, the glasses fetch and SSE client, the settings screen, `background.ts`, the tsconfig and vite config, the test setup that blocks the network, and the README outline.
+Written for this project: the question queue and merger, the Telegram source, the replay fixture, the answer window and undo, the screens, the input mapping and the MCP tools.
+
+AI tool disclosure: fill in according to the event rules.
+
+## Not verified yet
+
+- Screens in the simulator, and anything on real G2 hardware: text wrapping and widths (the question is cut at 40 characters per line, 3 lines, based on "about 400-500 characters fill the screen"; the hint line is 49 characters and may wrap), whether `▲` and `●` render (the glyph guide lists them), list of events per gesture (swipe up = text event 1, swipe down = 2, tap = system event 0, hold 9 and release 10: from the SDK type file and the guide, not from a device).
+- The background-state hooks (`background.ts` follows the guide's host contract; SDK 0.0.16 does not export the named functions).
+- The real Telegram Bot API, a real LLM and a real speech service (only offline tests with injected `fetch`). Telegram flood limits and edits of the vote button under many simultaneous votes are untested.
+- Whether `http://` server addresses are accepted by the Even app WebView outside the simulator.
+- Glasses gesture to confirm an AI merge proposal does not exist.
+- Whether the Bot Developer Terms were read completely and correctly (see above).

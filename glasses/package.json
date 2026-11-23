@@ -1,0 +1,22 @@
+{
+  "name": "next-question-glasses",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview",
+    "pack": "evenhub pack app.json dist -o next-question.ehpk --sdk-ver 0.0.16",
+    "check:pages": "tsx scripts/check-pages.ts"
+  },
+  "dependencies": {
+    "@evenrealities/even_hub_sdk": "0.0.16"
+  },
+  "devDependencies": {
+    "@evenrealities/evenhub-cli": "0.2.0",
+    "tsx": "^4.23.15",
+    "typescript": "~7.0.2",
+    "vite": "^8.3.6"
+  }
+}

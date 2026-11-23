@@ -1,0 +1,175 @@
+{
+ "_note": "Fictional AMA for a made-up crypto project. Times are seconds after start; n = extra voters.",
+ "events": [
+  {
+   "t": 1.5,
+   "id": "a1",
+   "ask": "When is the mainnet launch?",
+   "n": 4
+  },
+  {
+   "t": 4,
+   "id": "a2",
+   "ask": "How will token holders vote on governance proposals?",
+   "n": 3
+  },
+  {
+   "t": 7,
+   "id": "a3",
+   "ask": "Is the mainnet contract audited, and by whom?",
+   "n": 6
+  },
+  {
+   "t": 10,
+   "id": "a4",
+   "ask": "How are staking rewards calculated?",
+   "n": 2
+  },
+  {
+   "t": 12,
+   "id": "p1",
+   "ask": "What is the planned date for mainnet release?",
+   "n": 2
+  },
+  {
+   "t": 14,
+   "id": "a5",
+   "ask": "Will there be an airdrop for early supporters?",
+   "n": 5
+  },
+  {
+   "t": 18,
+   "id": "a6",
+   "ask": "What happens to the treasury if the token price drops a lot?",
+   "n": 1
+  },
+  {
+   "t": 23,
+   "id": "a7",
+   "ask": "Which exchanges will list the token first?",
+   "n": 3
+  },
+  {
+   "t": 28,
+   "id": "a8",
+   "ask": "How many people work on the core protocol today?"
+  },
+  {
+   "t": 30,
+   "vote": "a3",
+   "n": 3
+  },
+  {
+   "t": 34,
+   "id": "a9",
+   "ask": "Is there a plan to support more than one chain?",
+   "n": 4
+  },
+  {
+   "t": 40,
+   "id": "a10",
+   "ask": "How do you keep bridge transfers safe?",
+   "n": 2
+  },
+  {
+   "t": 45,
+   "id": "p2",
+   "ask": "How does governance voting work for token holders?",
+   "n": 1
+  },
+  {
+   "t": 47,
+   "id": "a11",
+   "ask": "What is the token unlock schedule for the team?",
+   "n": 7
+  },
+  {
+   "t": 52,
+   "vote": "a11",
+   "n": 4
+  },
+  {
+   "t": 55,
+   "id": "a12",
+   "ask": "Can small wallets join the testnet incentive program?",
+   "n": 1
+  },
+  {
+   "t": 58,
+   "id": "p3",
+   "ask": "Is an airdrop planned for early community supporters?",
+   "n": 1
+  },
+  {
+   "t": 63,
+   "id": "a13",
+   "ask": "Will the docs be translated into other languages?"
+  },
+  {
+   "t": 66,
+   "vote": "a9",
+   "n": 3
+  },
+  {
+   "t": 72,
+   "id": "a14",
+   "ask": "What fees will normal users pay on the network?",
+   "n": 3
+  },
+  {
+   "t": 80,
+   "id": "a15",
+   "ask": "How will you handle a critical bug after launch?",
+   "n": 2
+  },
+  {
+   "t": 85,
+   "vote": "a18",
+   "n": 5
+  },
+  {
+   "t": 90,
+   "id": "a16",
+   "ask": "Do you plan to publish a public roadmap each quarter?",
+   "n": 1
+  },
+  {
+   "t": 100,
+   "id": "a17",
+   "ask": "Who can propose changes to the protocol rules?"
+  },
+  {
+   "t": 105,
+   "vote": "a14",
+   "n": 2
+  },
+  {
+   "t": 112,
+   "id": "a18",
+   "ask": "Is there a grant program for outside developers?",
+   "n": 4
+  },
+  {
+   "t": 120,
+   "vote": "a8",
+   "n": 4
+  },
+  {
+   "t": 125,
+   "id": "a19",
+   "ask": "How will the foundation spend its funds in the first year?",
+   "n": 2
+  },
+  {
+   "t": 138,
+   "id": "a20",
+   "ask": "What is the one thing you want the community to try first?",
+   "n": 1
+  },
+  {
+   "t": 145,
+   "vote": "a10",
+   "n": 3
+  }
+ ]
+}

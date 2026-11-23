@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="./favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Next Question</title>
+    <style>
+      body { margin: 0; font: 15px/1.5 -apple-system, system-ui, sans-serif; background: #111; color: #fff; }
+      main { max-width: 420px; margin: 0 auto; padding: 20px 16px 40px; }
+      h1 { font-size: 20px; margin: 0 0 4px; }
+      h2 { font-size: 15px; margin: 26px 0 0; }
+      .badge { display: inline-block; font-size: 12px; padding: 2px 8px; border-radius: 10px; background: #fef991; color: #232323; }
+      p.dim { color: #8a8a8a; margin: 6px 0 16px; }
+      label { display: block; margin: 14px 0 4px; color: #8a8a8a; font-size: 13px; }
+      input { width: 100%; box-sizing: border-box; padding: 10px; border: 0; border-radius: 8px; background: rgba(255,255,255,.08); color: #fff; font-size: 16px; }
+      button { margin-top: 14px; width: 100%; padding: 12px; border: 0; border-radius: 8px; background: #fef991; color: #232323; font-size: 16px; }
+      button.alt { background: rgba(255,255,255,.12); color: #fff; }
+      .row { display: flex; gap: 10px; }
+      #status { margin-top: 14px; min-height: 22px; color: #8a8a8a; }
+      #status.ok { color: #9be19b; }
+      #status.err { color: #ff9b9b; }
+    </style>
+  </head>
+  <body>
+    <main id="app"></main>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
