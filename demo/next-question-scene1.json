@@ -1,0 +1,24 @@
+{
+  "_note": "Capture seconds c = fixture seconds T - 14 (run-scene.sh starts capture serverOffsetSec after the first /api/health; +-0.5 s). Fixture events (T): 14 18 23 28 34 40 45 47 ... (T=30 is a vote for an already answered question = no screen change). Every input and mark is >= 1 s away from a fixture event, except marks that are meant to include one. long_press is NOT used (opens the Mac microphone). The second answered window (4 s) is not clicked.",
+  "automationPort": 9899,
+  "fps": 6,
+  "scale": 2,
+  "serverOffsetSec": 14,
+  "steps": [
+    { "at": 0.0, "action": "wait" },
+    { "at": 6.5, "action": "click" },
+    { "at": 17.0, "action": "down" },
+    { "at": 22.0, "action": "click" },
+    { "at": 30.0, "action": "session_end" },
+    { "at": 34.0, "action": "end" }
+  ],
+  "marks": [
+    { "at": 3.0, "name": "01_question_1" },
+    { "at": 8.5, "name": "02_answered_1" },
+    { "at": 12.5, "name": "03_question_2" },
+    { "at": 19.5, "name": "04_question_3_after_skip" },
+    { "at": 23.5, "name": "05_answered_2" },
+    { "at": 28.0, "name": "06_question_4" },
+    { "at": 32.5, "name": "07_ended" }
+  ]
+}
