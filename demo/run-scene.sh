@@ -14,7 +14,19 @@ SCRIPT="$(cd "$(dirname "${1:?usage: run-scene.sh <script.json> <outDir>}")" && 
 mkdir -p "${2:?usage: run-scene.sh <script.json> <outDir>}"
 OUT="$(cd "$2" && pwd)"
 
+# Simulator: SIM_JS (path to the package's bin/index.js), else the `evenhub-simulator` command on PATH
+# (npm i -g @evenrealities/evenhub-simulator).
 SIM_JS="${SIM_JS:-}"
+if [ -n "$SIM_JS" ]; then
+  SIM_CMD=(node "$SIM_JS")
+else
+  SIM_BIN="$(command -v evenhub-simulator || true)"
+  [ -n "$SIM_BIN" ] || { echo "simulator not found: set SIM_JS to @evenrealities/evenhub-simulator/bin/index.js, or install it so evenhub-simulator is on PATH" >&2; exit 2; }
+  SIM_CMD=("$SIM_BIN")
+fi
+# Optional: SIM_WINDOW_POS="x,y" moves the simulator window there (e.g. onto a spare display while recording).
+SIM_WINDOW_POS="${SIM_WINDOW_POS:-}"
+case "$SIM_WINDOW_POS" in "" | [0-9-]*,[0-9-]*) ;; *) echo "SIM_WINDOW_POS must look like x,y" >&2; exit 2 ;; esac
 SERVER_PORT="${SERVER_PORT:-8788}"
 APP_PORT="${APP_PORT:-5174}"
 SPEED="${REPLAY_SPEED:-1}"
@@ -107,14 +119,16 @@ stage "vite up"
 
 # 2. simulator (the app takes the server address and the pair code from the URL: ?server=...&pair=...)
 URL="http://127.0.0.1:$APP_PORT/?server=http://127.0.0.1:$SERVER_PORT&pair=$PAIR"
-node "$SIM_JS" "$URL" --automation-port "$AUTO_PORT" --no-glow > "$OUT/logs/simulator.log" 2>&1 &
+"${SIM_CMD[@]}" "$URL" --automation-port "$AUTO_PORT" --no-glow > "$OUT/logs/simulator.log" 2>&1 &
 echo $! > "$OUT/pids/simulator.pid"
 wait_http "http://127.0.0.1:$AUTO_PORT/api/ping" 30 || { echo "simulator did not come up (see $OUT/logs/simulator.log)" >&2; exit 4; }
 stage "simulator ping ok"
 
-# 3. move the simulator window to the AI virtual display (try twice, record positions and errors)
+# 3. optional: move the simulator window to SIM_WINDOW_POS (try twice, record positions and errors)
+#    Capture does not depend on the window position (frames come from the automation port).
+if [ -n "$SIM_WINDOW_POS" ]; then
 pos_get() { osascript -e 'tell application "System Events" to tell process "evenhub-simulator" to get position of window 1' 2>&1 | tr -d ' \n'; }
-pos_set() { osascript -e 'tell application "System Events" to tell process "evenhub-simulator" to set position of every window to {3900, 1120}' 2>&1; }
+pos_set() { osascript -e "tell application \"System Events\" to tell process \"evenhub-simulator\" to set position of every window to {${SIM_WINDOW_POS}}" 2>&1; }
 POS_BEFORE=""
 for i in $(seq 1 20); do
   POS_BEFORE="$(pos_get)"
@@ -124,11 +138,14 @@ done
 ERR1="$(pos_set)"; POS_AFTER1="$(pos_get)"
 sleep 1
 ERR2="$(pos_set)"; POS_AFTER2="$(pos_get)"
-POS_BEFORE="$POS_BEFORE" ERR1="$ERR1" ERR2="$ERR2" POS_AFTER1="$POS_AFTER1" POS_AFTER2="$POS_AFTER2" node -e '
-  const e=process.env;
-  const ok=e.POS_AFTER2==="3900,1120";
-  require("fs").writeFileSync(process.argv[1],JSON.stringify({target:"3900,1120",before:e.POS_BEFORE,attempt1:{error:e.ERR1||null,after:e.POS_AFTER1},attempt2:{error:e.ERR2||null,after:e.POS_AFTER2},movedToTarget:ok},null,2))' "$OUT/window.json"
+TARGET="$SIM_WINDOW_POS" POS_BEFORE="$POS_BEFORE" ERR1="$ERR1" ERR2="$ERR2" POS_AFTER1="$POS_AFTER1" POS_AFTER2="$POS_AFTER2" node -e '
+  const e=process.env; const target=e.TARGET.replace(/\s/g,"");
+  const ok=e.POS_AFTER2===target;
+  require("fs").writeFileSync(process.argv[1],JSON.stringify({target,before:e.POS_BEFORE,attempt1:{error:e.ERR1||null,after:e.POS_AFTER1},attempt2:{error:e.ERR2||null,after:e.POS_AFTER2},movedToTarget:ok},null,2))' "$OUT/window.json"
 stage "window moved (see window.json)"
+else
+  stage "window not moved (SIM_WINDOW_POS unset)"
+fi
 
 # 4. server (replay = fictional AMA from server/fixtures/questions.json, never touches the network; STT=none so the mic is not used)
 S_EPOCH_MS="$(node -e 'console.log(Date.now())')"

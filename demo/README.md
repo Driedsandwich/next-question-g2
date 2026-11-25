@@ -7,6 +7,7 @@ the glasses app (vite, port 5174) and the simulator (automation port 9899), runs
 demo/run-scene.sh demo/next-question-scene1.json /path/to/output-dir
 ```
 
+- Simulator: `SIM_JS` (path to `@evenrealities/evenhub-simulator/bin/index.js`) or the `evenhub-simulator` command on PATH. Set `SIM_WINDOW_POS=x,y` to move its window (needs macOS Accessibility permission for `osascript`); capture does not depend on it.
 - Server journal and pairing code go to `<out>/data/` (not into the repo). The app gets `?server=...&pair=...` in its URL.
 - Refuses to start if 8788, 5174 or the automation port is already listening. Never kills by port; PIDs are in `<out>/pids/`.
 - Script fields: `automationPort`, `fps`, `scale`, `serverOffsetSec` (capture t0 = first /api/health + this),
