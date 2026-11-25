@@ -20,8 +20,10 @@ export interface Screen {
 export const W = 576
 export const H = 288
 export const HINT = `Tap = answered ${DOT} Swipe = skip ${DOT} Hold = say answer`
-export const BODY_COLS = 40
-export const BODY_LINES = 3
+// 11/25 シミュレータで測った（~/dev/_x289_probe/width-g2）: 質問の枠（w576・余白 6）は混じった英文で約 63 字・大文字だけで約 53 字が 1 行に入り、
+// 6 行まで切れずに入る＝大文字でも溢れない 52 字・余りを残して 5 行にした（実機の字は未確認）。
+export const BODY_COLS = 52
+export const BODY_LINES = 5
 const TITLE = `NEXT QUESTION ${DOT} AMA`
 
 /**

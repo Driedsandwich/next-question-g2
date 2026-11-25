@@ -80,7 +80,7 @@ for (const [name, s, ctx] of cases) {
 const checks: [string, boolean][] = [
   ['header line', headerLine(base) === 'AMA · 12 votes · 3 of 17 · 18 min left'],
   ['curly quotes and dashes become ASCII', glassText(longText).startsWith('Hey team - you said the "treasury"')],
-  ['long text is cut with ...', wrapClip(longText).endsWith('...') && wrapClip(longText).split('\n').length === 3],
+  ['long text is cut with ...', wrapClip(longText + ' ' + longText).endsWith('...') && wrapClip(longText + ' ' + longText).split('\n').length === BODY_LINES],
   ['short text is untouched', wrapClip('When is mainnet?') === 'When is mainnet?'],
 ]
 for (const [n, pass] of checks) {
