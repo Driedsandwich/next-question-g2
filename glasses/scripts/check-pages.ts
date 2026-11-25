@@ -1,6 +1,6 @@
 // Offline check of the screens. The SDK validator only covers z-order/menu rules, so the rules from the glasses-ui
 // guide are asserted here too: <=12 containers, exactly one event capture, unique ids, unique names <=16 chars,
-// text <=1000 chars. Also: the question text is at most 3 lines, and fixed text uses only characters known to be in the G2 font.
+// text <=1000 chars. Also: the question text is at most BODY_LINES lines, and fixed text uses only characters known to be in the G2 font.
 import { formatEvenHubPageContainerValidationError, validateEvenHubPageContainer } from '@evenrealities/even_hub_sdk'
 import type { ServerState } from '../src/api.ts'
 import { BODY_LINES, buildScreen, glassText, headerLine, toCreate, toRebuild, wrapClip } from '../src/screens.ts'
