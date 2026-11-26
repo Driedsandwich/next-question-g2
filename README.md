@@ -115,7 +115,7 @@ Question texts are written by the audience: the tools say so in every answer, an
 - **Merger and voice.** With `MERGER=openai-compatible` the questions are sent to the model you configure; with `STT=openai-compatible` your spoken key point is sent to the speech service. Both are off by default.
 - The demo is a fictional AMA (`server/fixtures/questions.json`) for a made-up project.
 
-## What existed before the build period (started 2026-11-23)
+## What existed before the build period (started 2026-11-23), and what is shared with fill-notes
 
 Not written for this project:
 
@@ -123,7 +123,7 @@ Not written for this project:
 - npm packages: Vite, TypeScript, vitest, tsx, `@modelcontextprotocol/sdk`, zod.
 - Services and APIs: the Telegram Bot API, the OpenAI-compatible chat and transcription API shapes, the Model Context Protocol.
 
-Reused from `fill-notes` (a project by the same entrant, made on 2026-11-24): the pairing code (`pairing.ts`), the speech-to-text client (`stt.ts`), the HTTP/SSE/CORS server layout, the glasses fetch and SSE client, the settings screen, `background.ts`, the tsconfig and vite config, the test setup that blocks the network, and the README outline.
+Shared with `fill-notes`, the entrant's other entry in this hackathon (also built during the build period, first commit 2026-11-24): the pairing code (`pairing.ts`), the speech-to-text client (`stt.ts`), the HTTP/SSE/CORS server layout, the glasses fetch and SSE client, the settings screen, `background.ts`, the tsconfig and vite config, the test setup that blocks the network, and the README outline.
 Written for this project: the question queue and merger, the Telegram source, the replay fixture, the answer window and undo, the screens, the input mapping and the MCP tools.
 
 ## How AI tools were used
