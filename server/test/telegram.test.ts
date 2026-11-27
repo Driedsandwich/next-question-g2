@@ -109,6 +109,38 @@ describe('presenter and pairing', () => {
     await t.src.handle(msg(GROUP, FAN, '/ama_start 30'))
     expect(t.engine.getState().session.status).toBe('live')
   })
+  it('locks a user after five wrong codes of their own', async () => {
+    const t = makeRig()
+    for (let i = 0; i < 4; i++) await t.src.handle(msg(FAN, FAN, '/pair 000000'))
+    await t.src.handle(msg(FAN2, FAN2, '/pair 000000'))
+    await t.src.handle(msg(FAN, FAN, '/pair 000000'))
+    await t.src.handle(msg(FAN, FAN, `/pair ${CODE}`))
+    expect(sent(t.calls).map((call) => call.params.text)).toEqual(Array(6).fill('That code is not right.'))
+  })
+  it('allows a second user to pair while the first user is locked', async () => {
+    const t = makeRig()
+    for (let i = 0; i < 5; i++) await t.src.handle(msg(FAN, FAN, '/pair 000000'))
+    await t.src.handle(msg(PRESENTER, PRESENTER, `/pair ${CODE}`))
+    expect(sent(t.calls).at(-1)!.params).toMatchObject({ chat_id: PRESENTER, text: expect.stringContaining('Paired.') })
+    await t.src.handle(msg(FAN, FAN, `/pair ${CODE}`))
+    await t.src.handle(msg(GROUP, PRESENTER, '/ama_start 30'))
+    expect(t.engine.getState().session.status).toBe('live')
+  })
+  it('keeps pairing records for the newest 1000 users', async () => {
+    const t = makeRig()
+    for (const id of [FAN, FAN2]) {
+      for (let i = 0; i < 5; i++) await t.src.handle(msg(id, id, '/pair 000000'))
+    }
+    for (let id = 1000; id < 1998; id++) await t.src.handle(msg(id, id, '/pair 000000'))
+    const count = t.calls.length
+    await t.src.handle(msg(FAN, FAN, `/pair ${CODE}`))
+    expect(t.calls).toHaveLength(count)
+    await t.src.handle(msg(1998, 1998, '/pair 000000'))
+    await t.src.handle(msg(FAN, FAN, `/pair ${CODE}`))
+    expect(sent(t.calls).at(-1)!.params).toMatchObject({ chat_id: FAN, text: expect.stringContaining('Paired.') })
+    await t.src.handle(msg(FAN2, FAN2, `/pair ${CODE}`))
+    expect(t.calls).toHaveLength(count + 2)
+  })
   it('/ama_start binds the group, announces there, and /ama_end posts the summary', async () => {
     const t = makeRig({ presenterId: String(PRESENTER) })
     await t.src.handle(msg(GROUP, PRESENTER, '/ama_start 20'))

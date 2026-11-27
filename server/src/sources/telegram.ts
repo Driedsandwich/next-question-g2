@@ -7,7 +7,7 @@
  *    They are never put in the state, the logs, the answers or the files. Names and usernames are never read.
  *  - The bot token sits in the request path of the Bot API. Error messages here never include the URL.
  */
-import { checkPairCode } from '../pairing.ts'
+import { checkPairCode, MAX_PAIR_FAILS, PAIR_LOCK_MS, rememberPairAttempt } from '../pairing.ts'
 import type { Sink, QuestionSource } from '../sources.ts'
 import type { Announcer, Clock, FetchLike } from '../types.ts'
 import { systemClock } from '../types.ts'
@@ -131,9 +131,6 @@ export interface TelegramOptions {
   apiBase?: string
 }
 
-const MAX_PAIR_FAILS = 5
-const PAIR_LOCK_MS = 10 * 60 * 1000
-
 export class TelegramSource implements QuestionSource, Announcer {
   readonly name = 'telegram' as const
   readonly announcer: Announcer = this
@@ -145,8 +142,7 @@ export class TelegramSource implements QuestionSource, Announcer {
   private offset = 0
   private stopped = false
   private ctrl: AbortController | null = null
-  private pairFails = 0
-  private pairLockedUntil = 0
+  private pairAttempts = new Map<string, { fails: number; lockedUntil?: number }>()
   private clock: Clock
 
   constructor(private opts: TelegramOptions) {
@@ -220,17 +216,19 @@ export class TelegramSource implements QuestionSource, Announcer {
           break
         }
         const now = this.clock.now()
-        if (now < this.pairLockedUntil) break
+        const attempts = this.pairAttempts.get(a.userKey)
+        if (attempts?.lockedUntil !== undefined) {
+          if (now < attempts.lockedUntil) break
+          this.pairAttempts.delete(a.userKey)
+        }
         if (checkPairCode(a.code, this.opts.pairCode)) {
-          this.pairFails = 0
+          this.pairAttempts.delete(a.userKey)
           this.presenter = a.userKey
           await this.send(a.chatId, 'Paired. You are the presenter: run /ama_start <minutes> in the AMA group.')
         } else {
-          this.pairFails += 1
-          if (this.pairFails >= MAX_PAIR_FAILS) {
-            this.pairLockedUntil = now + PAIR_LOCK_MS
-            this.pairFails = 0
-          }
+          const fails = (attempts?.fails ?? 0) + 1
+          const next = fails >= MAX_PAIR_FAILS ? { fails: 0, lockedUntil: now + PAIR_LOCK_MS } : { fails }
+          rememberPairAttempt(this.pairAttempts, a.userKey, next)
           await this.send(a.chatId, 'That code is not right.')
         }
         break

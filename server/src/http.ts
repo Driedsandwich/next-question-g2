@@ -1,7 +1,9 @@
 import http from 'node:http'
 import type { Engine, PublicState } from './engine.ts'
 import { ConflictError, NotFoundError, VoiceUnavailableError } from './engine.ts'
-import { checkPairHeader } from './pairing.ts'
+import { checkPairCode, MAX_PAIR_FAILS, PAIR_LOCK_MS, pairHeaderCode, rememberPairAttempt } from './pairing.ts'
+import type { Clock } from './types.ts'
+import { systemClock } from './types.ts'
 
 const MAX_JSON = 64 * 1024
 const MAX_PCM = 2_000_000 // about 62 s of 16 kHz 16-bit mono
@@ -57,23 +59,45 @@ const str = (v: unknown): string | undefined => (typeof v === 'string' ? v : und
 export interface AppDeps {
   engine: Engine
   pairCode: string
+  clock?: Clock
 }
 
-export function createApp({ engine, pairCode }: AppDeps): http.Server {
+export function createApp({ engine, pairCode, clock = systemClock }: AppDeps): http.Server {
+  const pairAttempts = new Map<string, { codes: Map<string, number>; lockedUntil?: number }>()
   return http.createServer(async (req, res) => {
     cors(res)
-    const url = new URL(req.url ?? '/', 'http://localhost')
-    const route = `${req.method} ${url.pathname}`
+    let url: URL | undefined
     try {
+      url = new URL(req.url ?? '/', 'http://localhost')
+      const route = `${req.method} ${url.pathname}`
       if (req.method === 'OPTIONS') {
         res.writeHead(204)
         res.end()
         return
       }
       if (route === 'GET /api/health') return send(res, 200, { ok: true, app: 'next-question' })
-      if (!checkPairHeader(req.headers.authorization, pairCode)) {
+      const address = req.socket.remoteAddress
+      const now = clock.now()
+      let attempts = address === undefined ? undefined : pairAttempts.get(address)
+      if (address !== undefined && attempts?.lockedUntil !== undefined) {
+        if (now < attempts.lockedUntil) return send(res, 429, { error: 'pairing temporarily locked' })
+        pairAttempts.delete(address)
+        attempts = undefined
+      }
+      const candidate = pairHeaderCode(req.headers.authorization)
+      if (candidate === undefined || !checkPairCode(candidate, pairCode)) {
+        if (address !== undefined && candidate !== undefined) {
+          const codes = attempts?.codes ?? new Map<string, number>()
+          for (const [code, at] of codes) {
+            if (now - at >= PAIR_LOCK_MS) codes.delete(code)
+          }
+          codes.set(candidate, now)
+          const lockedUntil = codes.size >= MAX_PAIR_FAILS ? now + PAIR_LOCK_MS : undefined
+          rememberPairAttempt(pairAttempts, address, { codes, lockedUntil })
+        }
         return send(res, 401, { error: 'pairing required: send "Authorization: Pair <6-digit code>"' })
       }
+      if (address !== undefined) pairAttempts.delete(address)
       switch (route) {
         case 'GET /api/state':
           return send(res, 200, engine.getState())
@@ -134,11 +158,12 @@ export function createApp({ engine, pairCode }: AppDeps): http.Server {
       }
     } catch (e) {
       if (res.headersSent) return res.end()
+      if (!url) return send(res, 400, { error: 'invalid request target' })
       if (e instanceof HttpError) return send(res, e.status, { error: e.message })
       if (e instanceof NotFoundError) return send(res, 404, { error: e.message })
       if (e instanceof ConflictError) return send(res, 409, { error: e.message })
       if (e instanceof VoiceUnavailableError) return send(res, 501, { error: e.message })
-      console.error(`[http] ${route}: ${(e as Error).message}`)
+      console.error(`[http] ${req.method} ${url.pathname}: ${(e as Error).message}`)
       return send(res, 500, { error: 'internal error' })
     }
   })

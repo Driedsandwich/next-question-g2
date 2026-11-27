@@ -10,9 +10,11 @@ set -m   # every background job gets its own process group (pgid == pid)
 
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT="$(cd "$HERE/.." && pwd)"
-SCRIPT="$(cd "$(dirname "${1:?usage: run-scene.sh <script.json> <outDir>}")" && pwd)/$(basename "$1")"
-mkdir -p "${2:?usage: run-scene.sh <script.json> <outDir>}"
-OUT="$(cd "$2" && pwd)"
+SCRIPT="${1:?usage: run-scene.sh <script.json> <outDir>}"
+case "$SCRIPT" in /*) ;; *) SCRIPT="$PWD/$SCRIPT" ;; esac
+OUT="$(node "$HERE/scene-names.mjs" "$SCRIPT" "${2:?usage: run-scene.sh <script.json> <outDir>}" && printf .)" || exit $?
+OUT="${OUT%.}"
+mkdir -p "$OUT" || exit 2
 
 # Simulator: SIM_JS (path to the package's bin/index.js), else the `evenhub-simulator` command on PATH
 # (npm i -g @evenrealities/evenhub-simulator).

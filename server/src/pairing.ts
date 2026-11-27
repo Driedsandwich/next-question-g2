@@ -2,6 +2,17 @@ import crypto from 'node:crypto'
 import fs from 'node:fs'
 import path from 'node:path'
 
+export const MAX_PAIR_FAILS = 5
+export const PAIR_LOCK_MS = 10 * 60 * 1000
+const MAX_PAIR_CLIENTS = 1000
+
+export function rememberPairAttempt<T>(attempts: Map<string, T>, key: string, value: T): void {
+  if (!attempts.has(key) && attempts.size === MAX_PAIR_CLIENTS) {
+    attempts.delete(attempts.keys().next().value!)
+  }
+  attempts.set(key, value)
+}
+
 export function generateCode(): string {
   return String(crypto.randomInt(0, 1_000_000)).padStart(6, '0')
 }
@@ -23,12 +34,12 @@ export function loadOrCreatePairCode(dir: string): string {
 
 /** Accepts `Authorization: Pair 123456`. Constant-time compare. */
 export function checkPairHeader(header: string | undefined, code: string): boolean {
-  if (!header) return false
-  const m = /^Pair\s+(\d{6})$/.exec(header.trim())
-  if (!m) return false
-  const a = Buffer.from(m[1]!)
-  const b = Buffer.from(code)
-  return a.length === b.length && crypto.timingSafeEqual(a, b)
+  const candidate = pairHeaderCode(header)
+  return candidate !== undefined && checkPairCode(candidate, code)
+}
+
+export function pairHeaderCode(header: string | undefined): string | undefined {
+  return /^Pair\s+(\d{6})$/.exec(header?.trim() ?? '')?.[1]
 }
 
 /** Checks a bare 6-digit code (used for `/pair <code>` in a private Telegram chat). Constant-time compare. */
