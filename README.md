@@ -113,7 +113,7 @@ Question texts are written by the audience: the tools say so in every answer, an
 - **Telegram rules.** The app uses question text only to show and answer it, sends 1 to 3 messages per question, and deletes nothing by itself: the operator deletes `data/answered.jsonl` when it is no longer needed or on request. The operator follows the group's own rules and Telegram's terms, and should tell the group that questions are shown to the presenter and logged.
 - **Prompt injection.** A question can say anything. It is only shown as text and passed to the optional merger as data. The MCP answers carry a warning.
 - **Merger and voice.** With `MERGER=openai-compatible` the questions are sent to the model you configure; with `STT=openai-compatible` your spoken key point is sent to the speech service. Both are off by default.
-- **Local network.** The glasses app reaches your server over plain HTTP on your local network, with the 6-digit pair code in a header. Run it on a network you trust (a phone hotspot works at a venue). After 5 different wrong codes from one address, the server refuses that address for 10 minutes.
+- **Local network.** The glasses app reaches your server over plain HTTP on your local network, with the 6-digit pair code in a header. Run it on a network you trust (for example, your own phone hotspot). After 5 different wrong codes from one address, the server refuses that address for 10 minutes.
 - The demo is a fictional AMA (`server/fixtures/questions.json`) for a made-up project.
 
 ## What existed before the build period (started 2026-11-23), and what is shared with fill-notes
